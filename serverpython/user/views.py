@@ -4,24 +4,43 @@ from rest_framework import status
 from .serializers import UserSerializer, UserLoginSerializer
 from .models import User
 
+from rest_framework.authtoken.models import Token
+from django.contrib.auth import authenticate
+
 from nltk.sentiment import SentimentIntensityAnalyzer
 
 # Create your views here.
 class Login(CreateAPIView):
-    serializer_class = UserLoginSerializer
-
+    # serializer_class = UserLoginSerializer
     def post(self, request):
         # return Response("ASHUPPPPPPPP")
-        serializer = self.serializer_class(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        response = {
-            'success' : 'True',
-            'status code' : status.HTTP_200_OK,
-            'message': 'User logged in  successfully',
-            'token' : serializer.data['token'],
-            }
-        status_code = status.HTTP_200_OK
-        return Response(response, status=status_code)
+        
+        username = request.data.get('username')
+        password = request.data.get('password')
+
+        if username is "" or password is "":
+            return Response(
+                {
+                    'error': 'Please Input the Username and Password'
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        user = authenticate(username=username, password=password)
+        print(user)
+        if user:
+            token, _ = Token.objects.get_or_create(user=user)
+            return Response({
+                "key": token.key,
+                "username": user.username
+            })
+        else :
+            return Response(
+            {
+                'error': 'invalid username or password'
+            },
+            status=status.HTTP_400_BAD_REQUEST
+        )
 
 class UserView(CreateAPIView):
     def get(self, request):
