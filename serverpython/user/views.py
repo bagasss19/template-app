@@ -7,7 +7,9 @@ from .models import User
 from rest_framework.authtoken.models import Token
 from django.contrib.auth import authenticate
 
-from nltk.sentiment import SentimentIntensityAnalyzer
+import json
+import pickle
+import os
 
 # Create your views here.
 class Login(CreateAPIView):
@@ -26,7 +28,7 @@ class Login(CreateAPIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        user = authenticate(username=username, password=password)
+        user = authenticate(request, username=username, password=password)
         print(user)
         if user:
             token, _ = Token.objects.get_or_create(user=user)
@@ -99,18 +101,25 @@ class UserView(CreateAPIView):
 class ModelView(CreateAPIView):
     def post(self, request):
         try:
-            sia = SentimentIntensityAnalyzer()
-            result = sia.polarity_scores(request.data["word"])
-            print(result)
+            module_dir = os.path.dirname(__file__)  
+            tfdifloc = os.path.join(module_dir, 'tfidf.pickle')  
+            mnbloc = os.path.join(module_dir, 'mnb.pickle')
+            
+            #Load tfidf matrix
+            tfidf = pickle.load(open(tfdifloc, "rb"))
 
-            if result["compound"] > 0:
+            #Load mnb model
+            mnb = pickle.load(open(mnbloc, "rb"))
+
+            tfidf_baru = tfidf.transform([request.data["word"]])
+            hasil = mnb.predict(tfidf_baru)
+            print(hasil, "<<<hasil nich")
+            if hasil == 0:
                 return Response({
-                "compound score": result["compound"],
                 "sentiment" : "positive"
             })
             else :
                 return Response({
-                "compound score": result["compound"],
                 "sentiment" : "negative"
             })
         except Exception as error:
