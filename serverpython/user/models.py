@@ -8,9 +8,19 @@ class User(AbstractBaseUser):
     )
     email = models.EmailField(
         max_length=255,
-        unique=True
+        # unique=True
         )
-    password = models.CharField(max_length=60)
+    password = models.CharField(max_length=100)
+    is_staff = models.BooleanField(
+        default=False
+    )
+    is_superuser = models.BooleanField(
+        default=False
+    )
     USERNAME_FIELD = 'username'
-    REQUIRED_FIELDS = []
+    REQUIRED_FIELDS = ['email']
     objects = UserManager()
+
+    def __str__(self):
+        """A string representation of the model."""
+        return self.username

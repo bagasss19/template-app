@@ -1,11 +1,12 @@
 from rest_framework.response import Response
 from rest_framework.generics import CreateAPIView
 from rest_framework import status
-from .serializers import UserSerializer, UserLoginSerializer
+from .serializers import UserSerializer, CreateUserSerializer
 from .models import User
 
 from rest_framework.authtoken.models import Token
 from django.contrib.auth import authenticate
+from rest_framework.permissions import IsAuthenticated, AllowAny
 
 import json
 import pickle
@@ -13,10 +14,8 @@ import os
 
 # Create your views here.
 class Login(CreateAPIView):
-    # serializer_class = UserLoginSerializer
+    permission_classes = (AllowAny,)
     def post(self, request):
-        # return Response("ASHUPPPPPPPP")
-        
         username = request.data.get('username')
         password = request.data.get('password')
 
@@ -44,6 +43,15 @@ class Login(CreateAPIView):
             status=status.HTTP_400_BAD_REQUEST
         )
 
+class RegisterView(CreateAPIView):
+
+    '''
+     METHOD -> POST
+     # class yang berfungsi untuk membuat akun kandidat baru.
+     # hanya admin yang bisa mengakses endpoint ini.
+    '''
+    serializer_class = CreateUserSerializer
+
 class UserView(CreateAPIView):
     def get(self, request):
         try:
@@ -51,19 +59,6 @@ class UserView(CreateAPIView):
             user = User.objects.all()
             serializer = UserSerializer(user, many=True)
             return Response(serializer.data)
-        except Exception as error:
-            return Response({
-                "detail": str(error)
-            },
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-    def post(self, request):
-        try:
-            serializer = UserSerializer(data=request.data)
-            if serializer.is_valid():
-                serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
         except Exception as error:
             return Response({
                 "detail": str(error)
@@ -99,6 +94,7 @@ class UserView(CreateAPIView):
             )
 
 class ModelView(CreateAPIView):
+    permission_classes = (IsAuthenticated,)
     def post(self, request):
         try:
             module_dir = os.path.dirname(__file__)  

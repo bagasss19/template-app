@@ -3,40 +3,43 @@ from .models import User
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import update_last_login
 from rest_framework_jwt.settings import api_settings
-# from rest.apps.user.models import User
-# from rest_framework.response import Response
 
-JWT_PAYLOAD_HANDLER = api_settings.JWT_PAYLOAD_HANDLER
-JWT_ENCODE_HANDLER = api_settings.JWT_ENCODE_HANDLER
+from rest_framework.response import Response
+from rest_framework import status
+# JWT_PAYLOAD_HANDLER = api_settings.JWT_PAYLOAD_HANDLER
+# JWT_ENCODE_HANDLER = api_settings.JWT_ENCODE_HANDLER
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ('id','username', 'email', 'password')
 
-class UserLoginSerializer(serializers.Serializer):
+class CreateUserSerializer(serializers.Serializer):
+    username = serializers.CharField()
+    email = serializers.CharField()
+    password = serializers.CharField(
+        write_only=True,
+        help_text='Leave empty if no change needed',
+        style={'input_type': 'password', 'placeholder': 'Password'}
+    )
 
-    email = serializers.CharField(max_length=255)
-    password = serializers.CharField(max_length=128, write_only=True)
-    token = serializers.CharField(max_length=255, read_only=True)
+    class Meta:
+        model = User
+        # fields = ('username', 'email', 'password')
+        # extra_kwargs = {'password': {'write_only': True}}
 
-    def validate(self, data):
-        email = data.get("email", None)
-        password = data.get("password", None)
-        user = authenticate(email=email, password=password)
-        if user is None:
-            raise serializers.ValidationError(
-                'A user with this email and password is not found.'
-            )
+    def create(self, validated_data):
         try:
-            payload = JWT_PAYLOAD_HANDLER(user)
-            jwt_token = JWT_ENCODE_HANDLER(payload)
-            update_last_login(None, user)
-        except User.DoesNotExist:
-            raise serializers.ValidationError(
-                'User with given email and password does not exists'
+            user = User.objects.create_user(**validated_data)
+            user.save()
+
+            print(user, "<<<<<<USER NIH")
+            return user
+            # return Response(user, status=status.HTTP_201_CREATED)
+
+        except Exception as error:
+            return Response({
+                "detail": str(error)
+            },
+                status=status.HTTP_400_BAD_REQUEST,
             )
-        return {
-            'email':user.email,
-            'token': jwt_token
-        }
